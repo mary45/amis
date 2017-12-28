@@ -1,290 +1,411 @@
-/*==============================================================*/
-/* DBMS name:      ORACLE Version 11g                           */
-/* Created on:     15.11.2017 21:59:32                          */
-/*==============================================================*/
+
+--
+-- Create model ContentType
+--
+CREATE TABLE "DJANGO_CONTENT_TYPE" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "NAME" NVARCHAR2(100) NULL, "APP_LABEL" NVARCHAR2(100) NULL, "MODEL" NVARCHAR2(100) NULL);
+--
+-- Alter unique_together for contenttype (1 constraint(s))
+--
+ALTER TABLE "DJANGO_CONTENT_TYPE" ADD CONSTRAINT "DJANGO_CO_APP_LABEL_76BD3D3B_U" UNIQUE ("APP_LABEL", "MODEL");
+
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'DJANGO_CONTENT_TYPE_SQ';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "DJANGO_CONTENT_TYPE_SQ"';
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER "DJANGO_CONTENT_TYPE_TR"
+BEFORE INSERT ON "DJANGO_CONTENT_TYPE"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "DJANGO_CONTENT_TYPE_SQ".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
+COMMIT;
 
 
-alter table List
-   drop constraint FK_USER_CREATE_LIST;
+--
+-- Change Meta options on contenttype
+--
+--
+-- Alter field name on contenttype
+--
+--
+-- MIGRATION NOW PERFORMS OPERATION THAT CANNOT BE WRITTEN AS SQL:
+-- Raw Python operation
+--
+--
+-- Remove field name from contenttype
+--
+ALTER TABLE "DJANGO_CONTENT_TYPE" DROP COLUMN "NAME";
+COMMIT;
 
-alter table List
-   drop constraint FK_PRODUCTS_IN_LIST;
 
-alter table "Order"
-   drop constraint FK_BOOKING_LIST;
+--
+-- Create model Permission
+--
+CREATE TABLE "AUTH_PERMISSION" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "NAME" NVARCHAR2(50) NULL, "CONTENT_TYPE_ID" NUMBER(11) NOT NULL, "CODENAME" NVARCHAR2(100) NULL);
+--
+-- Create model Group
+--
+CREATE TABLE "AUTH_GROUP" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "NAME" NVARCHAR2(80) NULL UNIQUE);
+CREATE TABLE "AUTH_GROUP_PERMISSIONS" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "GROUP_ID" NUMBER(11) NOT NULL, "PERMISSION_ID" NUMBER(11) NOT NULL);
+--
+-- Create model User
+--
 
-alter table "Prodact in the shop"
-   drop constraint FK_PRODACT_IN_SHOP;
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'AUTH_PERMISSION_SQ';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "AUTH_PERMISSION_SQ"';
+    END IF;
+END;
+/
 
-alter table "Prodact in the shop"
-   drop constraint FK_SHOP_SELLS_PRODUCTS;
+CREATE OR REPLACE TRIGGER "AUTH_PERMISSION_TR"
+BEFORE INSERT ON "AUTH_PERMISSION"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "AUTH_PERMISSION_SQ".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
+ALTER TABLE "AUTH_PERMISSION" ADD CONSTRAINT "AUTH_PERM_CONTENT_T_2F476E4B_F" FOREIGN KEY ("CONTENT_TYPE_ID") REFERENCES "DJANGO_CONTENT_TYPE" ("ID") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "AUTH_PERMISSION" ADD CONSTRAINT "AUTH_PERM_CONTENT_T_01AB375A_U" UNIQUE ("CONTENT_TYPE_ID", "CODENAME");
+CREATE INDEX "AUTH_PERMI_CONTENT_TY_2F476E4B" ON "AUTH_PERMISSION" ("CONTENT_TYPE_ID");
 
-drop index "Product belonsg to the list_FK";
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'AUTH_GROUP_SQ';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "AUTH_GROUP_SQ"';
+    END IF;
+END;
+/
 
-drop index "Creation of the list_FK";
+CREATE OR REPLACE TRIGGER "AUTH_GROUP_TR"
+BEFORE INSERT ON "AUTH_GROUP"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "AUTH_GROUP_SQ".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
 
-drop table List cascade constraints;
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'AUTH_GROUP_PERMISSIONS_SQ';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "AUTH_GROUP_PERMISSIONS_SQ"';
+    END IF;
+END;
+/
 
-drop index "Booking an order_FK";
+CREATE OR REPLACE TRIGGER "AUTH_GROUP_PERMISSIONS_TR"
+BEFORE INSERT ON "AUTH_GROUP_PERMISSIONS"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "AUTH_GROUP_PERMISSIONS_SQ".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
+ALTER TABLE "AUTH_GROUP_PERMISSIONS" ADD CONSTRAINT "AUTH_GROU_GROUP_ID_B120CBF9_F" FOREIGN KEY ("GROUP_ID") REFERENCES "AUTH_GROUP" ("ID") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "AUTH_GROUP_PERMISSIONS" ADD CONSTRAINT "AUTH_GROU_PERMISSIO_84C5C92E_F" FOREIGN KEY ("PERMISSION_ID") REFERENCES "AUTH_PERMISSION" ("ID") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "AUTH_GROUP_PERMISSIONS" ADD CONSTRAINT "AUTH_GROU_GROUP_ID__0CD325B0_U" UNIQUE ("GROUP_ID", "PERMISSION_ID");
+CREATE INDEX "AUTH_GROUP_GROUP_ID_B120CBF9" ON "AUTH_GROUP_PERMISSIONS" ("GROUP_ID");
+CREATE INDEX "AUTH_GROUP_PERMISSION_84C5C92E" ON "AUTH_GROUP_PERMISSIONS" ("PERMISSION_ID");
+COMMIT;
 
-drop table "Order" cascade constraints;
 
-drop index "Selles products_FK";
+--
+-- Alter field name on permission
+--
+ALTER TABLE "AUTH_PERMISSION" MODIFY "NAME" NVARCHAR2(255);
+COMMIT;
 
-drop index "Selles products2_FK";
 
-drop table "Prodact in the shop" cascade constraints;
+--
+-- Create model Registration
+--
+CREATE TABLE "REGISTER_REGISTRATION" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "PASSWORD" NVARCHAR2(128) NULL, "LAST_LOGIN" TIMESTAMP NULL, "IS_SUPERUSER" NUMBER(1) NOT NULL CHECK ("IS_SUPERUSER" IN (0,1)), "USERNAME" NVARCHAR2(150) NULL UNIQUE, "FIRST_NAME" NVARCHAR2(30) NULL, "LAST_NAME" NVARCHAR2(30) NULL, "EMAIL" NVARCHAR2(254) NULL, "IS_STAFF" NUMBER(1) NOT NULL CHECK ("IS_STAFF" IN (0,1)), "IS_ACTIVE" NUMBER(1) NOT NULL CHECK ("IS_ACTIVE" IN (0,1)), "DATE_JOINED" TIMESTAMP NOT NULL, "IDENTIFYING" NVARCHAR2(8) NULL, "PHONE" NVARCHAR2(50) NULL, "ADRESS" NVARCHAR2(50) NULL, "SHOP_NAME" NVARCHAR2(50) NULL);
+CREATE TABLE "REGISTER_REGISTRATION_GROUPS" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "REGISTRATION_ID" NUMBER(11) NOT NULL, "GROUP_ID" NUMBER(11) NOT NULL);
+CREATE TABLE "REGISTER_REGISTRATION_USEREB29" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "REGISTRATION_ID" NUMBER(11) NOT NULL, "PERMISSION_ID" NUMBER(11) NOT NULL);
 
-drop table Product cascade constraints;
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'REGISTER_REGISTRATION_SQ';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "REGISTER_REGISTRATION_SQ"';
+    END IF;
+END;
+/
 
-drop table Shop cascade constraints;
+CREATE OR REPLACE TRIGGER "REGISTER_REGISTRATION_TR"
+BEFORE INSERT ON "REGISTER_REGISTRATION"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "REGISTER_REGISTRATION_SQ".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
 
-drop table "User" cascade constraints;
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'REGISTER_REGISTRATION_GC1CF';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "REGISTER_REGISTRATION_GC1CF"';
+    END IF;
+END;
+/
 
-/*==============================================================*/
-/* Table: List                                                  */
-/*==============================================================*/
-create table List 
-(
-   product_name         VARCHAR2(30)         not null,
-   shop_id              INTEGER              not null,
-   user_email           VARCHAR2(20)         not null,
-   list_id              INTEGER              not null,
-   product_quantity     INTEGER              not null,
-   constraint PK_LIST primary key (product_name, shop_id, user_email, list_id)
-);
+CREATE OR REPLACE TRIGGER "REGISTER_REGISTRATION_G5EAF"
+BEFORE INSERT ON "REGISTER_REGISTRATION_GROUPS"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "REGISTER_REGISTRATION_GC1CF".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
+ALTER TABLE "REGISTER_REGISTRATION_GROUPS" ADD CONSTRAINT "REGISTER__REGISTRAT_5979E407_F" FOREIGN KEY ("REGISTRATION_ID") REFERENCES "REGISTER_REGISTRATION" ("ID") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "REGISTER_REGISTRATION_GROUPS" ADD CONSTRAINT "REGISTER__GROUP_ID_5DF9C552_F" FOREIGN KEY ("GROUP_ID") REFERENCES "AUTH_GROUP" ("ID") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "REGISTER_REGISTRATION_GROUPS" ADD CONSTRAINT "REGISTER__REGISTRAT_9300C91E_U" UNIQUE ("REGISTRATION_ID", "GROUP_ID");
+CREATE INDEX "REGISTER_R_REGISTRATI_5979E407" ON "REGISTER_REGISTRATION_GROUPS" ("REGISTRATION_ID");
+CREATE INDEX "REGISTER_R_GROUP_ID_5DF9C552" ON "REGISTER_REGISTRATION_GROUPS" ("GROUP_ID");
 
-/*==============================================================*/
-/* Index: "Creation of the list_FK"                             */
-/*==============================================================*/
-create index "Creation of the list_FK" on List (
-   user_email ASC
-);
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'REGISTER_REGISTRATION_U350B';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "REGISTER_REGISTRATION_U350B"';
+    END IF;
+END;
+/
 
-/*==============================================================*/
-/* Index: "Product belonsg to the list_FK"                      */
-/*==============================================================*/
-create index "Product belonsg to the list_FK" on List (
-   product_name ASC,
-   shop_id ASC
-);
+CREATE OR REPLACE TRIGGER "REGISTER_REGISTRATION_UB805"
+BEFORE INSERT ON "REGISTER_REGISTRATION_USEREB29"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "REGISTER_REGISTRATION_U350B".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
+ALTER TABLE "REGISTER_REGISTRATION_USEREB29" ADD CONSTRAINT "REGISTER__REGISTRAT_18537EF2_F" FOREIGN KEY ("REGISTRATION_ID") REFERENCES "REGISTER_REGISTRATION" ("ID") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "REGISTER_REGISTRATION_USEREB29" ADD CONSTRAINT "REGISTER__PERMISSIO_5590CEF5_F" FOREIGN KEY ("PERMISSION_ID") REFERENCES "AUTH_PERMISSION" ("ID") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "REGISTER_REGISTRATION_USEREB29" ADD CONSTRAINT "REGISTER__REGISTRAT_FC9891AA_U" UNIQUE ("REGISTRATION_ID", "PERMISSION_ID");
+CREATE INDEX "REGISTER_R_REGISTRATI_18537EF2" ON "REGISTER_REGISTRATION_USEREB29" ("REGISTRATION_ID");
+CREATE INDEX "REGISTER_R_PERMISSION_5590CEF5" ON "REGISTER_REGISTRATION_USEREB29" ("PERMISSION_ID");
+COMMIT;
 
-/*==============================================================*/
-/* Table: "Order"                                               */
-/*==============================================================*/
-create table "Order" 
-(
-   product_name         VARCHAR2(30)         not null,
-   shop_id              INTEGER              not null,
-   user_email           VARCHAR2(20)         not null,
-   list_id              INTEGER              not null,
-   order_id             INTEGER              not null,
-   order_date           VARCHAR2(20)         not null,
-   constraint PK_ORDER primary key (product_name, shop_id, user_email, list_id, order_id)
-);
 
-/*==============================================================*/
-/* Index: "Booking an order_FK"                                 */
-/*==============================================================*/
-create index "Booking an order_FK" on "Order" (
-   product_name ASC,
-   shop_id ASC,
-   user_email ASC,
-   list_id ASC
-);
+--
+-- Create model LogEntry
+--
+CREATE TABLE "DJANGO_ADMIN_LOG" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "ACTION_TIME" TIMESTAMP NOT NULL, "OBJECT_ID" NCLOB NULL, "OBJECT_REPR" NVARCHAR2(200) NULL, "ACTION_FLAG" NUMBER(11) NOT NULL CHECK ("ACTION_FLAG" >= 0), "CHANGE_MESSAGE" NCLOB NULL, "CONTENT_TYPE_ID" NUMBER(11) NULL, "USER_ID" NUMBER(11) NOT NULL);
 
-/*==============================================================*/
-/* Table: "Prodact in the shop"                                 */
-/*==============================================================*/
-create table "Prodact in the shop" 
-(
-   product_name         VARCHAR2(30)         not null,
-   shop_id              INTEGER              not null,
-   adding_date          VARCHAR2(20)         not null,
-   constraint "PK_PRODACT IN THE SHOP" primary key (product_name, shop_id)
-);
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'DJANGO_ADMIN_LOG_SQ';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "DJANGO_ADMIN_LOG_SQ"';
+    END IF;
+END;
+/
 
-/*==============================================================*/
-/* Index: "Selles products2_FK"                                 */
-/*==============================================================*/
-create index "Selles products2_FK" on "Prodact in the shop" (
-   shop_id ASC
-);
+CREATE OR REPLACE TRIGGER "DJANGO_ADMIN_LOG_TR"
+BEFORE INSERT ON "DJANGO_ADMIN_LOG"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "DJANGO_ADMIN_LOG_SQ".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
+ALTER TABLE "DJANGO_ADMIN_LOG" ADD CONSTRAINT "DJANGO_AD_CONTENT_T_C4BCE8EB_F" FOREIGN KEY ("CONTENT_TYPE_ID") REFERENCES "DJANGO_CONTENT_TYPE" ("ID") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "DJANGO_ADMIN_LOG" ADD CONSTRAINT "DJANGO_AD_USER_ID_C564EBA6_F" FOREIGN KEY ("USER_ID") REFERENCES "REGISTER_REGISTRATION" ("ID") DEFERRABLE INITIALLY DEFERRED;
+CREATE INDEX "DJANGO_ADM_CONTENT_TY_C4BCE8EB" ON "DJANGO_ADMIN_LOG" ("CONTENT_TYPE_ID");
+CREATE INDEX "DJANGO_ADM_USER_ID_C564EBA6" ON "DJANGO_ADMIN_LOG" ("USER_ID");
+COMMIT;
 
-/*==============================================================*/
-/* Index: "Selles products_FK"                                  */
-/*==============================================================*/
-create index "Selles products_FK" on "Prodact in the shop" (
-   product_name ASC
-);
 
-/*==============================================================*/
-/* Table: Product                                               */
-/*==============================================================*/
-create table Product 
-(
-   product_name         VARCHAR2(30)         not null,
-   product_tm           VARCHAR2(25)         not null,
-   product_country      VARCHAR2(20)         not null,
-   product_price        FLOAT(10)            not null,
-   product_category     VARCHAR2(18)         not null,
-   product_photo        VARCHAR2(60),         
-   constraint PK_PRODUCT primary key (product_name)
-);
+--
+-- Create model Order
+--
+CREATE TABLE "PRODUCTS_ORDER" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "ORDER_TIME" TIMESTAMP NULL, "QUANTITY" NUMBER(11) NOT NULL CHECK ("QUANTITY" >= 0));
+--
+-- Create model ProductItem
+--
+CREATE TABLE "PRODUCTS_PRODUCTITEM" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "NAME" NVARCHAR2(50) NULL, "PRICE" NUMBER(11) NOT NULL CHECK ("PRICE" >= 0), "QUANTITY" NUMBER(11) NOT NULL CHECK ("QUANTITY" >= 0), "PRODUCT_PICTURE" NVARCHAR2(100) NULL);
+--
+-- Create model Shop
+--
+CREATE TABLE "PRODUCTS_SHOP" ("ID" NUMBER(11) NOT NULL PRIMARY KEY, "NAME" NVARCHAR2(50) NULL, "PLACE" NVARCHAR2(100) NULL, "DESCRTIPTION" NVARCHAR2(255) NULL, "OWNER_ID" NUMBER(11) NOT NULL UNIQUE);
+--
+-- Add field shop to productitem
+--
+ALTER TABLE "PRODUCTS_PRODUCTITEM" ADD "SHOP_ID" NUMBER(11) NULL;
+--
+-- Add field product_item to order
+--
+ALTER TABLE "PRODUCTS_ORDER" ADD "PRODUCT_ITEM_ID" NUMBER(11) NULL;
+--
+-- Add field shop to order
+--
+ALTER TABLE "PRODUCTS_ORDER" ADD "SHOP_ID" NUMBER(11) NOT NULL;
+--
+-- Add field user to order
+--
+ALTER TABLE "PRODUCTS_ORDER" ADD "USER_ID" NUMBER(11) NOT NULL;
+--
+-- Alter unique_together for productitem (1 constraint(s))
+--
+ALTER TABLE "PRODUCTS_PRODUCTITEM" ADD CONSTRAINT "PRODUCTS__NAME_SHOP_AC589AF3_U" UNIQUE ("NAME", "SHOP_ID");
 
-/*==============================================================*/
-/* Table: Shop                                                  */
-/*==============================================================*/
-create table Shop 
-(
-   shop_id              INTEGER              not null,
-   shop_adress          VARCHAR2(30)         not null,
-   shop_name            VARCHAR2(20)         not null,
-   shop_email           VARCHAR2(18)         not null,
-   shop_phone           NUMBER(10)           not null,
-   shop_admin_name      VARCHAR2(40)         not null,
-   shop_password        VARCHAR2(10)         not null,
-   constraint PK_SHOP primary key (shop_id)
-);
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'PRODUCTS_ORDER_SQ';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "PRODUCTS_ORDER_SQ"';
+    END IF;
+END;
+/
 
-/*==============================================================*/
-/* Table: "User"                                                */
-/*==============================================================*/
-create table "User" 
-(
-   user_email           VARCHAR2(20)         not null,
-   user_name            VARCHAR2(30)         not null,
-   user_lastname        VARCHAR2(30)         not null,
-   user_password        VARCHAR2(10)         not null,
-   constraint PK_USER primary key (user_email)
-);
+CREATE OR REPLACE TRIGGER "PRODUCTS_ORDER_TR"
+BEFORE INSERT ON "PRODUCTS_ORDER"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "PRODUCTS_ORDER_SQ".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
 
-alter table List
-   add constraint FK_USER_CREATE_LIST foreign key (user_email)
-      references "User" (user_email);
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'PRODUCTS_PRODUCTITEM_SQ';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "PRODUCTS_PRODUCTITEM_SQ"';
+    END IF;
+END;
+/
 
-alter table List
-   add constraint FK_PRODUCTS_IN_LIST foreign key (product_name, shop_id)
-      references "Prodact in the shop" (product_name, shop_id);
+CREATE OR REPLACE TRIGGER "PRODUCTS_PRODUCTITEM_TR"
+BEFORE INSERT ON "PRODUCTS_PRODUCTITEM"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "PRODUCTS_PRODUCTITEM_SQ".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
 
-alter table "Order"
-   add constraint FK_BOOKING_LIST foreign key (product_name, shop_id, user_email, list_id)
-      references List (product_name, shop_id, user_email, list_id);
+DECLARE
+    i INTEGER;
+BEGIN
+    SELECT COUNT(1) INTO i FROM USER_SEQUENCES
+        WHERE SEQUENCE_NAME = 'PRODUCTS_SHOP_SQ';
+    IF i = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE "PRODUCTS_SHOP_SQ"';
+    END IF;
+END;
+/
 
-alter table "Prodact in the shop"
-   add constraint FK_PRODACT_IN_SHOP foreign key (product_name)
-      references Product (product_name);
+CREATE OR REPLACE TRIGGER "PRODUCTS_SHOP_TR"
+BEFORE INSERT ON "PRODUCTS_SHOP"
+FOR EACH ROW
+WHEN (new."ID" IS NULL)
+    BEGIN
+        SELECT "PRODUCTS_SHOP_SQ".nextval
+        INTO :new."ID" FROM dual;
+    END;
+/
+ALTER TABLE "PRODUCTS_SHOP" ADD CONSTRAINT "PRODUCTS__OWNER_ID_011910B6_F" FOREIGN KEY ("OWNER_ID") REFERENCES "REGISTER_REGISTRATION" ("ID") DEFERRABLE INITIALLY DEFERRED;
+CREATE INDEX "PRODUCTS_P_SHOP_ID_BD0DDE71" ON "PRODUCTS_PRODUCTITEM" ("SHOP_ID");
+ALTER TABLE "PRODUCTS_PRODUCTITEM" ADD CONSTRAINT "PRODUCTS__SHOP_ID_BD0DDE71_F" FOREIGN KEY ("SHOP_ID") REFERENCES "PRODUCTS_SHOP" ("ID") DEFERRABLE INITIALLY DEFERRED;
+CREATE INDEX "PRODUCTS_O_PRODUCT_IT_DD7E9276" ON "PRODUCTS_ORDER" ("PRODUCT_ITEM_ID");
+ALTER TABLE "PRODUCTS_ORDER" ADD CONSTRAINT "PRODUCTS__PRODUCT_I_DD7E9276_F" FOREIGN KEY ("PRODUCT_ITEM_ID") REFERENCES "PRODUCTS_PRODUCTITEM" ("ID") DEFERRABLE INITIALLY DEFERRED;
+CREATE INDEX "PRODUCTS_O_SHOP_ID_C74452DD" ON "PRODUCTS_ORDER" ("SHOP_ID");
+ALTER TABLE "PRODUCTS_ORDER" ADD CONSTRAINT "PRODUCTS__SHOP_ID_C74452DD_F" FOREIGN KEY ("SHOP_ID") REFERENCES "PRODUCTS_SHOP" ("ID") DEFERRABLE INITIALLY DEFERRED;
+CREATE INDEX "PRODUCTS_O_USER_ID_DFB540D8" ON "PRODUCTS_ORDER" ("USER_ID");
+ALTER TABLE "PRODUCTS_ORDER" ADD CONSTRAINT "PRODUCTS__USER_ID_DFB540D8_F" FOREIGN KEY ("USER_ID") REFERENCES "REGISTER_REGISTRATION" ("ID") DEFERRABLE INITIALLY DEFERRED;
+COMMIT;
 
-alter table "Prodact in the shop"
-   add constraint FK_SHOP_SELLS_PRODUCTS foreign key (shop_id)
-      references Shop (shop_id);
+
+--
+-- Create model Session
+--
+CREATE TABLE "DJANGO_SESSION" ("SESSION_KEY" NVARCHAR2(40) NOT NULL PRIMARY KEY, "SESSION_DATA" NCLOB NULL, "EXPIRE_DATE" TIMESTAMP NOT NULL);
+CREATE INDEX "DJANGO_SES_EXPIRE_DAT_A5C62663" ON "DJANGO_SESSION" ("EXPIRE_DATE");
+COMMIT;
+
+--
+-- Customs
+--
+CREATE OR REPLACE TRIGGER CREATE_DATE BEFORE INSERT ON PRODUCTS_ORDER 
+FOR EACH ROW
+BEGIN
+ :NEW.ORDER_TIME := SYSDATE;
+END;
+/
+COMMIT;
 
 /*==============================================================*/
 /* Added manually                                               */
 /*==============================================================*/
 
-ALTER TABLE "User"
-   ADD CONSTRAINT user_unique UNIQUE (user_email);
-
-ALTER TABLE "User"
+ALTER TABLE "REGISTER_REGISTRATION"
    ADD CONSTRAINT check_user_email
-      CHECK ( REGEXP_LIKE (user_email, '[a-z0-9._]+@[a-z0-9._]+\.[a-z]{2,4}'));
+      CHECK ( REGEXP_LIKE (EMAIL, '[a-z0-9._]+@[a-z0-9._]+\.[a-z]{2,4}'));
 
-ALTER TABLE "User"
-   ADD CONSTRAINT check_user_name
-      CHECK (REGEXP_LIKE(user_name,'[A-Z][a-z]{1,25}','c'));
+ALTER TABLE "REGISTER_REGISTRATION"
+   ADD CONSTRAINT check_adress
+      CHECK ( REGEXP_LIKE (ADRESS, '[A-Za-z0-9_., /]{0,30}'));
 
-ALTER TABLE "User"
-   ADD CONSTRAINT check_user_lastname
-      CHECK (REGEXP_LIKE(user_lastname,'[A-Z][a-z]{1,25}','c'));
-
-ALTER TABLE "User"
-   ADD CONSTRAINT check_user_password
-      CHECK (REGEXP_LIKE(user_password,'[A-Za-z0-9_]{6,10}'));
-
-ALTER TABLE Shop
-   ADD CONSTRAINT shop_id_unique UNIQUE (shop_id);
-
-ALTER TABLE Shop
-   ADD CONSTRAINT shop_details_unique UNIQUE (shop_adress, shop_name, shop_email);
-
-ALTER TABLE Shop
-   ADD CONSTRAINT check_shop_id
-      CHECK ( REGEXP_LIKE (shop_id, '[0-9]{1,10}'));
-
-ALTER TABLE Shop
-   ADD CONSTRAINT check_shop_adress
-      CHECK ( REGEXP_LIKE (shop_adress, '[A-Za-z0-9_., /]{10,30}'));
-
-ALTER TABLE Shop
-   ADD CONSTRAINT check_shop_email
-      CHECK ( REGEXP_LIKE (shop_email, '[a-z0-9._]+@[a-z0-9._]+\.[a-z]{2,4}'));
-
-ALTER TABLE Shop
+ALTER TABLE "REGISTER_REGISTRATION"
    ADD CONSTRAINT check_shop_name
-      CHECK (REGEXP_LIKE(shop_name,'[A-Z a-z]{2,20}'));
+      CHECK (REGEXP_LIKE(SHOP_NAME,'[A-Z a-z]{2,20}'));
 
-ALTER TABLE Shop
-   ADD CONSTRAINT check_shop_phone
-      CHECK (shop_phone LIKE '[(.]?\d{3}[).]\d{3}[-.]?\d{2}[-.]?\d{2}');
-
-ALTER TABLE Shop
-   ADD CONSTRAINT check_shop_admin_name
-      CHECK (REGEXP_LIKE(shop_admin_name,'[A-Z][a-z]{1,20}','c'));
-
-ALTER TABLE Shop
-   ADD CONSTRAINT check_shop_pass
-      CHECK (REGEXP_LIKE(shop_password,'[A-Za-z0-9_]{6,10}'));
-
-ALTER TABLE Product
-   ADD CONSTRAINT product_name_unique UNIQUE (product_name);
-
-ALTER TABLE Product
+ALTER TABLE "PRODUCTS_SHOP"
    ADD CONSTRAINT check_product_name
-      CHECK (REGEXP_LIKE(product_name,'[A-Z][a-z]{3,30}','c'));
+      CHECK (REGEXP_LIKE(NAME,'[A-Z a-z]{2,20}'));
 
-ALTER TABLE Product
-   ADD CONSTRAINT check_product_tm
-      CHECK (REGEXP_LIKE(product_tm,'[A-Z][a-z]{1,25}','c'));
+ALTER TABLE "PRODUCTS_SHOP"
+   ADD CONSTRAINT check_shop_adress
+      CHECK ( REGEXP_LIKE (PLACE, '[A-Za-z0-9_., /]{0,30}'));
 
-ALTER TABLE Product
-   ADD CONSTRAINT check_product_country
-      CHECK (REGEXP_LIKE(product_country,'[A-Z][a-z]{1,20}','c'));
+ALTER TABLE "PRODUCTS_PRODUCTITEM"
+   ADD CONSTRAINT check_product_name2
+      CHECK (REGEXP_LIKE(NAME,'[A-Z a-z]{2,20}'));
 
-ALTER TABLE Product
-   ADD CONSTRAINT check_product_price
-      CHECK (REGEXP_LIKE(product_price,'[0-9]{1,6}.[0-9]{1,2}'));
-
-ALTER TABLE Product
-   ADD CONSTRAINT check_product_category
-      CHECK (REGEXP_LIKE(product_category,'[A-Z][a-z]{3,18}','c'));
-
-ALTER TABLE Product
-   ADD CONSTRAINT check_product_photo
-      CHECK (REGEXP_LIKE(product_photo,'[A-Za-z0-9_\-/.,]{2,60}'));
-
-ALTER TABLE "Order"
-   ADD CONSTRAINT order_id_unique UNIQUE (order_id);
-
-ALTER TABLE "Order"
-   ADD CONSTRAINT check_order_id
-      CHECK (REGEXP_LIKE(order_id,'[0-9]{1,10}'));
-
-ALTER TABLE "Order"
-   ADD CONSTRAINT check_order_date
-      CHECK (REGEXP_LIKE(order_date,'\b\d{2}[./]?\d{2}[./]?\d{4}\b'));
-
-ALTER TABLE "Prodact in the shop"
-   ADD CONSTRAINT check_adding_date
-      CHECK (REGEXP_LIKE(adding_date,'\b\d{2}[./]?\d{2}[./]?\d{4}\b'));
-
-ALTER TABLE List
-   ADD CONSTRAINT list_id_unique UNIQUE (list_id);
-
-ALTER TABLE List
-   ADD CONSTRAINT check_list_id
-      CHECK (REGEXP_LIKE(list_id,'[0-9]{1,10}'));
-
-ALTER TABLE List
-   ADD CONSTRAINT check_product_quantity
-      CHECK (length(product_quantity) > 0 and length(product_quantity) <= 20);
+COMMIT;
